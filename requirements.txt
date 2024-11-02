@@ -3,8 +3,8 @@ requests
 selenium
 webdriver-manager
 pandas
-json
-pickle
+#json
+#pickle
 git+https://github.com/ejde/fantraxapi
 
 # For Recommendations

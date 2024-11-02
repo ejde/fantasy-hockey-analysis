@@ -6,7 +6,9 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import WebDriverException
 from webdriver_manager.chrome import ChromeDriverManager
+from webdriver_manager.core.os_manager import ChromeType
 from requests import Session
 from streamlit.runtime.scriptrunner import RerunException
 import utils
@@ -36,8 +38,9 @@ league_id = st.session_state['league_id']
 if not st.session_state.get('logged_in', False):
     if st.sidebar.button("Login to Fantrax"):
         try:
-            service = Service(ChromeDriverManager().install())
+            service = Service(ChromeDriverManager(chrome_type=ChromeType.CHROMIUM).install())
             options = Options()
+            options.add_argument("--disable-gpu")
             options.add_argument("--window-size=480,640")
             options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.71 Safari/537.36")
 
@@ -56,7 +59,7 @@ if not st.session_state.get('logged_in', False):
             st.session_state['session'] = session
             st.session_state['logged_in'] = True
 
-        except (webdriver.common.exceptions.WebDriverException, pickle.PickleError) as e:
+        except (WebDriverException, pickle.PickleError) as e:
             st.sidebar.error(f"Login failed: {str(e)}")
 else:
     # If already logged in, show logout button
@@ -69,7 +72,6 @@ else:
         raise RerunException
 
 # *** MAIN ROSTER PAGE ***
-import streamlit as st
 from fantraxapi import FantraxAPI
 
 if 'logged_in' in st.session_state and st.session_state['logged_in']:
