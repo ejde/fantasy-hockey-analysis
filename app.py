@@ -32,7 +32,7 @@ if not st.session_state.get('logged_in', False):
     password = st.sidebar.text_input("Password", type="password")
     if st.sidebar.button("Login to Fantrax"):
         try:
-            service = Service(ChromeDriverManager(chrome_type=ChromeType.CHROMIUM).install())
+            service = Service()
             options = Options()
             options.add_argument("--headless")
             options.add_argument("--disable-gpu")
@@ -45,7 +45,6 @@ if not st.session_state.get('logged_in', False):
             options.add_experimental_option('useAutomationExtension', False)
 
             # Initialize the WebDriver
-            service = Service(ChromeDriverManager().install())
             driver = webdriver.Chrome(service=service, options=options)
 
             # Set up wait
