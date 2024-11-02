@@ -6,9 +6,7 @@ Welcome to the **Fantasy Hockey Analysis**! This application leverages **Google 
 
 - **Login and Session Management**: Authenticate with your Fantrax account to access private league information.
 - **Team Selection**: Easily select a team from your league and view the roster.
-- **Available Players**: Search for available players categorized by position (Forwards, Defense, Goalies).
 - **AI-Powered Recommendations**: Google Gemini provides personalized recommendations to enhance your team's standing.
-- **Multi-Page Navigation**: Navigate easily between roster, available players, and recommendation pages.
 
 ## How to Run the Application Locally
 
@@ -42,13 +40,13 @@ Welcome to the **Fantasy Hockey Analysis**! This application leverages **Google 
    Start the Streamlit application.
 
    ```sh
-   streamlit run Team_Standings_and_Rosters.py
+   streamlit run app.py
    ```
 
 ### File Structure
 
-- **Team_Standings_and_Rosters.py**: Main entry point for the Streamlit application, which initializes the session and navigation.
-- **pages/**: Contains the multi-page components, like Available Players.
+- **appy.py**: Main entry point for the Streamlit application, which initializes the session, shows the league standings and AI-powered recommendations.
+- **Available_Players**: In Development
 - **utils.py**: Helper functions for transforming data to a usable format.
 - **requirements.txt**: Lists the required packages for running the app.
 
@@ -56,8 +54,7 @@ Welcome to the **Fantasy Hockey Analysis**! This application leverages **Google 
 
 1. **Login**: Use your Fantrax credentials to log in.
 2. **Select a Team**: Choose your team from the dropdown list.
-3. **View Data**: Navigate through the pages to view the current roster, available players, and standings.
-4. **Generate Recommendations**: On the Recommendations page, view AI-powered suggestions for player acquisitions, drops, or trades to improve your standings.
+4. **Generate Recommendations**: View AI-powered suggestions for player acquisitions, drops, or trades to improve your standings.
 
 ## Technologies Used
 
@@ -67,6 +64,7 @@ Welcome to the **Fantasy Hockey Analysis**! This application leverages **Google 
 
 ## Future Improvements
 
+- **Available Players**: Search for available players categorized by position (Forwards, Defense, Goalies), and generate specific claims or drops from the team
 - **Full Automation for Data Upload**: Use SDKs (e.g., Google Cloud or AWS) to automate uploading data files.
 - **Advanced Visualization**: Add more charts and visual aids to show changes in team performance after applying recommendations.
 - **User Preferences**: Allow customization of AI recommendation settings, such as risk tolerance or positional needs.

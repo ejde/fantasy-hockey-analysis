@@ -84,6 +84,7 @@ if 'logged_in' in st.session_state and st.session_state['logged_in']:
             standings_json = json.dumps(input_data['standings'], indent=2)   
 
             # Construct the prompt
+            # todo: the prompt is way too huge, consider sticking in a file
             prompt = f"""
             You are an expert fantasy hockey advisor. Your task is to help improve the performance of a fantasy hockey team by analyzing their current roster, the list of available players, and the overall league standings. Your recommendations should focus on maximizing the team's points and improving their position in the standings.
 
