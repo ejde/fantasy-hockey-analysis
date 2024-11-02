@@ -1,75 +1,123 @@
 import streamlit as st
-
+from streamlit.runtime.scriptrunner import RerunException
 import pickle
+import utils
+import json
+import logging
+import re
+from requests import Session
+
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import WebDriverException
-from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.common.by import By
+
 from webdriver_manager.core.os_manager import ChromeType
-from requests import Session
-from streamlit.runtime.scriptrunner import RerunException
-import utils
-import json
+from webdriver_manager.chrome import ChromeDriverManager
+
 from langchain_google_genai.chat_models import ChatGoogleGenerativeAI
 from langchain.schema import HumanMessage
+
+
+# Set up logging
+logging.basicConfig(filename='selenium.log', level=logging.INFO, format='%(asctime)s %(levelname)s:%(message)s')
 
 st.set_page_config(page_title="Team Roster")
 st.title("Fantrax Fantasy Hockey Analysis")
 
-# *** SIDEBAR ***
-if 'league_id' not in st.session_state:
-    st.session_state['league_id'] = ''
-
-league_id_input = st.sidebar.text_input("Enter League ID", value=st.session_state['league_id'])
-
-if league_id_input != st.session_state['league_id']:
-    st.session_state['league_id'] = league_id_input
-
-if st.session_state['league_id']:
-    st.sidebar.success(f"League ID: {st.session_state['league_id']}")
-else:
-    st.sidebar.warning("Please enter a valid League ID.")
-
-league_id = st.session_state['league_id']
-
 if not st.session_state.get('logged_in', False):
+    username = st.sidebar.text_input("Username")
+    password = st.sidebar.text_input("Password", type="password")
     if st.sidebar.button("Login to Fantrax"):
         try:
             service = Service(ChromeDriverManager(chrome_type=ChromeType.CHROMIUM).install())
             options = Options()
+            options.add_argument("--headless")
             options.add_argument("--disable-gpu")
-            options.add_argument("--window-size=480,640")
-            options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.71 Safari/537.36")
+            options.add_argument("--window-size=1920,1080")
+            options.add_argument("--disable-blink-features=AutomationControlled")
+            options.add_argument("--no-sandbox")
+            options.add_argument("--disable-dev-shm-usage")
+            options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)")
+            options.add_experimental_option('excludeSwitches', ['enable-automation'])
+            options.add_experimental_option('useAutomationExtension', False)
 
-            with webdriver.Chrome(service=service, options=options) as driver:
-                driver.get("https://www.fantrax.com/login")
-                st.sidebar.write("Please log in to Fantrax in the opened browser window.")
-                WebDriverWait(driver, 120).until(EC.url_contains("fantrax.com/fantasy")) 
-                pickle.dump(driver.get_cookies(), open("fantraxloggedin.cookie", "wb"))
-                st.sidebar.success("Login successful! Cookies saved.")
+            # Initialize the WebDriver
+            service = Service(ChromeDriverManager().install())
+            driver = webdriver.Chrome(service=service, options=options)
 
-            session = Session()
-            with open("fantraxloggedin.cookie", "rb") as f:
-                for cookie in pickle.load(f):
-                    session.cookies.set(cookie["name"], cookie["value"])
+            # Set up wait
+            wait = WebDriverWait(driver, 10)
 
-            st.session_state['session'] = session
-            st.session_state['logged_in'] = True
+            # Navigate to the login page
+            logging.info("Navigating to the Fantrax login page.")
+            driver.get("https://www.fantrax.com/login")
 
-        except (WebDriverException, pickle.PickleError) as e:
-            st.sidebar.error(f"Login failed: {str(e)}")
+            # Wait for the username field to be present
+            username_field = wait.until(EC.presence_of_element_located((By.ID, 'mat-input-0')))
+            password_field = driver.find_element(By.ID, 'mat-input-1')
+            login_button = driver.find_element(By.XPATH, '//button[@type="submit"]')
+
+            # Enter credentials
+            logging.info("Entering user credentials.")
+            username_field.send_keys(username)
+            password_field.send_keys(password)
+
+            # Click the login button
+            login_button.click()
+
+            # Wait for the login process to complete
+            logging.info("Waiting for login to process.")
+            wait.until(EC.url_contains('/league/'))
+
+            # Get the current URL
+            current_url = driver.current_url
+            logging.info(f"Current URL after login: {current_url}")
+
+            # Extract the league_id from the URL            
+            match = re.search(r'/league/(\w+)/', current_url)
+            if match:
+                league_id = match.group(1)
+                st.session_state['league_id'] = league_id
+                st.sidebar.success(f"Login successful! League ID: {league_id}")
+                st.sidebar.write("Logged in as:", username)
+                st.session_state['username'] = username
+                st.sidebar.write("League ID:", league_id)
+                logging.info(f"Extracted League ID: {league_id}")
+
+                # Save cookies to a file
+                cookies = driver.get_cookies()
+                with open("fantraxloggedin.cookie", "wb") as f:
+                    pickle.dump(cookies, f)
+
+                # Create a requests session and load cookies
+                session = Session()
+                for cookie in cookies:
+                    session.cookies.set(cookie['name'], cookie['value'], domain=cookie['domain'])
+
+                st.session_state['session'] = session
+                st.session_state['logged_in'] = True
+
+            else:
+                st.error("Failed to extract league ID.")
+                logging.error("League ID not found in the URL.")
+
+        except Exception as e:
+            st.error(f"An error occurred: {e}")
+            logging.error(f"An exception occurred: {e}")
+
+        finally:
+            driver.quit()
 else:
     # If already logged in, show logout button
+    st.sidebar.write("Logged in as:", st.session_state['username'])
+    st.sidebar.write("League ID:", st.session_state['league_id'])
     if st.sidebar.button("Logout"):
-        # Clear all keys from session state
         st.session_state.clear()
-        
-        # Force a rerun to refresh the UI
         st.experimental_set_query_params()
-        raise RerunException
+        raise RerunException(None)
 
 # *** MAIN ROSTER PAGE ***
 from fantraxapi import FantraxAPI
@@ -192,16 +240,18 @@ if 'logged_in' in st.session_state and st.session_state['logged_in']:
                     st.error(f"Error fetching recommendations: {str(e)}")
 
                 # Show specific roster recommendations based on available player data
-                
+
             else:
                 st.warning("Please select a team from the 'Login & Team Selection' page.")           
-
-
 
         except (KeyError, AttributeError) as e:
             st.error(f"Error fetching teams: {str(e)}")
 
         except (KeyError, AttributeError) as e:
             st.error(f"Error fetching league data: {str(e)}")
+    else:
+        st.session_state.clear()
+        st.experimental_set_query_params()
+        raise RerunException
 else:
     st.info("Please log in using the sidebar to proceed.")
