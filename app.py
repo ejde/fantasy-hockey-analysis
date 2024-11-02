@@ -14,14 +14,10 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 
-from webdriver_manager.core.os_manager import ChromeType
-from webdriver_manager.chrome import ChromeDriverManager
-
 from langchain_google_genai.chat_models import ChatGoogleGenerativeAI
 from langchain.schema import HumanMessage
 
 
-# Set up logging
 logging.basicConfig(filename='selenium.log', level=logging.INFO, format='%(asctime)s %(levelname)s:%(message)s')
 
 st.set_page_config(page_title="Team Roster")
@@ -44,38 +40,24 @@ if not st.session_state.get('logged_in', False):
             options.add_experimental_option('excludeSwitches', ['enable-automation'])
             options.add_experimental_option('useAutomationExtension', False)
 
-            # Initialize the WebDriver
             driver = webdriver.Chrome(service=service, options=options)
-
-            # Set up wait
             wait = WebDriverWait(driver, 10)
-
-            # Navigate to the login page
             logging.info("Navigating to the Fantrax login page.")
             driver.get("https://www.fantrax.com/login")
 
-            # Wait for the username field to be present
             username_field = wait.until(EC.presence_of_element_located((By.ID, 'mat-input-0')))
             password_field = driver.find_element(By.ID, 'mat-input-1')
             login_button = driver.find_element(By.XPATH, '//button[@type="submit"]')
 
-            # Enter credentials
             logging.info("Entering user credentials.")
             username_field.send_keys(username)
             password_field.send_keys(password)
-
-            # Click the login button
             login_button.click()
 
-            # Wait for the login process to complete
             logging.info("Waiting for login to process.")
             wait.until(EC.url_contains('/league/'))
 
-            # Get the current URL
-            current_url = driver.current_url
-            logging.info(f"Current URL after login: {current_url}")
-
-            # Extract the league_id from the URL            
+            current_url = driver.current_url       
             match = re.search(r'/league/(\w+)/', current_url)
             if match:
                 league_id = match.group(1)
@@ -86,12 +68,10 @@ if not st.session_state.get('logged_in', False):
                 st.sidebar.write("League ID:", league_id)
                 logging.info(f"Extracted League ID: {league_id}")
 
-                # Save cookies to a file
                 cookies = driver.get_cookies()
                 with open("fantraxloggedin.cookie", "wb") as f:
                     pickle.dump(cookies, f)
 
-                # Create a requests session and load cookies
                 session = Session()
                 for cookie in cookies:
                     session.cookies.set(cookie['name'], cookie['value'], domain=cookie['domain'])
@@ -101,16 +81,13 @@ if not st.session_state.get('logged_in', False):
 
             else:
                 st.error("Failed to extract league ID.")
-                logging.error("League ID not found in the URL.")
 
         except Exception as e:
             st.error(f"An error occurred: {e}")
-            logging.error(f"An exception occurred: {e}")
 
         finally:
             driver.quit()
 else:
-    # If already logged in, show logout button
     st.sidebar.write("Logged in as:", st.session_state['username'])
     st.sidebar.write("League ID:", st.session_state['league_id'])
     if st.sidebar.button("Logout"):
@@ -132,14 +109,18 @@ if 'logged_in' in st.session_state and st.session_state['logged_in']:
             for section in standings_collection.standings:
                 for caption, standings in section.items():
                     stats_tables.append(caption)
-
-            stats = st.selectbox("Choose your Stat:", stats_tables, index=0)
+            
+            if st.secrets["default_stat"]:
+                stats = st.secrets["default_stat"]
+            else:
+                stats = st.selectbox("Choose your Stat:", stats_tables, index=0)
+            
             st.markdown(f"#### {stats}")     
-
             standings_df = utils.standings_to_dataframe(standings_collection, stats)
             st.dataframe(standings_df)
                         
             st.markdown("## Team Selection and Roster")
+            # todo: use api.default_team_id
             teams = api.teams 
             if teams:
                 team_dict = {team.name: team.team_id for team in teams}
@@ -156,14 +137,12 @@ if 'logged_in' in st.session_state and st.session_state['logged_in']:
             else:
                 st.warning("No teams found in this league.")
 
-            # Display roster
             roster = api.roster_info(team_dict[selected_team_name])
             st.markdown(f"#### {roster.team.name} Roster")
             st.write(f"Active: {roster.active}, Reserve: {roster.reserve}, Injured: {roster.injured}, Max: {roster.max}")
             roster_df = utils.playerstats_to_dataframe(roster)
             st.dataframe(roster_df)
 
-            # Show summary recommendations
             if 'selected_team_name' in st.session_state and 'selected_team_id' in st.session_state:
                 selected_team_name = st.session_state['selected_team_name']
                 selected_team_id = st.session_state['selected_team_id']
@@ -176,7 +155,6 @@ if 'logged_in' in st.session_state and st.session_state['logged_in']:
                 current_roster_json = json.dumps(input_data['current_roster'], indent=2)
                 standings_json = json.dumps(input_data['standings'], indent=2)   
 
-                # Construct the prompt
                 prompt = f"""
                 You are an expert fantasy hockey advisor. Your task is to help improve the performance of a fantasy hockey team by analyzing their current roster, and the overall league standings. Your recommendations should focus on maximizing the team's points and improving their position in the standings.
 
@@ -200,13 +178,17 @@ if 'logged_in' in st.session_state and st.session_state['logged_in']:
 
                 The objective is to help this team improve its overall rank in the standings and maximize future points based on the given data.
                 """
-                st.subheader(f"Recommendations for for Team: {selected_team_name}")
-                api_key = st.text_input("Enter your Google Generative AI API key:", type="password")
+                st.subheader(f"Recommendations for Team: {selected_team_name}")
+                if st.session_state['league_id'] in st.secrets["league_whitelist"]:
+                    api_key = st.secrets["gemini_key"]
+                else:
+                    api_key = st.text_input("Enter your Google Generative AI API key:", type="password")                
+                
                 if not api_key:
                     st.warning("Please enter your Google Generative AI API key to proceed.")
                     st.stop()
                 
-                chat_model = ChatGoogleGenerativeAI(model='gemini-1.5-pro-latest', google_api_key=api_key, temperature=0.8)
+                chat_model = ChatGoogleGenerativeAI(model='gemini-1.5-flash', google_api_key=api_key, temperature=0.8)
                 human_message = HumanMessage(content=prompt)
                 try:
                     response = None
@@ -222,7 +204,6 @@ if 'logged_in' in st.session_state and st.session_state['logged_in']:
                             if attempts >= max_attempts:
                                 raise e
                     
-                    # Assuming response is text, handle lengthy or incomplete responses
                     if response:
                         response_content = response.content
                         if len(response_content.split()) > 250:

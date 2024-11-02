@@ -1,30 +1,18 @@
 import pandas as pd
-import re
 
 def playerstats_to_dataframe(players):
-    """
-    Convert a PlayerStats object into a pandas DataFrame for easier visualization.
-    
-    Args:
-        players (PlayerStats): The PlayerStats object representing the roster.
-    
-    Returns:
-        pd.DataFrame: DataFrame representation of the playerstats.
-    """
     player_data = []
     for row in players.rows:
         row_data = {
             "Position": row.pos.name,
             "Player": row.player.name if row.player else 'N/A',
             "Team": row.player.team_short_name if row.player else 'N/A',
-            "Opponent": re.sub(r"<br\s*/?>", " ", row.stats.get("Opponent", "N/A")),
             "Comment": row.comment if row.comment else 'N/A'
         }
         row_data.update(row.stats)
         player_data.append(row_data)
     
     df = pd.DataFrame(player_data)
-    # Rename columns to be shorter and easier to display
     df.rename(columns={
         "Wins (Goalies only) -- Includes Overtime Wins and Shootout Wins. Skaters cannot get a win using this category - for that - use the \"regular\" Wins category.": "Wins",
         "Save Percentage -- Saves / Shots on Goal Against": "Save %"
