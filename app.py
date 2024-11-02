@@ -116,7 +116,7 @@ if 'logged_in' in st.session_state and st.session_state['logged_in']:
             roster_df = utils.playerstats_to_dataframe(roster)
             st.dataframe(roster_df)
 
-            # Show recommendations
+            # Show summary recommendations
             if 'selected_team_name' in st.session_state and 'selected_team_id' in st.session_state:
                 selected_team_name = st.session_state['selected_team_name']
                 selected_team_id = st.session_state['selected_team_id']
@@ -130,7 +130,6 @@ if 'logged_in' in st.session_state and st.session_state['logged_in']:
                 standings_json = json.dumps(input_data['standings'], indent=2)   
 
                 # Construct the prompt
-                # todo: the prompt is way too huge, consider sticking in a file
                 prompt = f"""
                 You are an expert fantasy hockey advisor. Your task is to help improve the performance of a fantasy hockey team by analyzing their current roster, and the overall league standings. Your recommendations should focus on maximizing the team's points and improving their position in the standings.
 
@@ -191,6 +190,9 @@ if 'logged_in' in st.session_state and st.session_state['logged_in']:
 
                 except Exception as e:
                     st.error(f"Error fetching recommendations: {str(e)}")
+
+                # Show specific roster recommendations based on available player data
+                
             else:
                 st.warning("Please select a team from the 'Login & Team Selection' page.")           
 

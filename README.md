@@ -52,7 +52,7 @@ Welcome to the **Fantasy Hockey Analysis**! This application leverages **Google 
 
 ## Usage
 
-1. **Login**: Use your Fantrax credentials to log in.
+1. **Login**: Use your Fantrax credentials to log in. A chrome window will open to capture session cookies. Currently working on headless login.
 2. **Select a Team**: Choose your team from the dropdown list.
 4. **Generate Recommendations**: View AI-powered suggestions for player acquisitions, drops, or trades to improve your standings.
 
@@ -64,6 +64,7 @@ Welcome to the **Fantasy Hockey Analysis**! This application leverages **Google 
 
 ## Future Improvements
 
+- **Headless Login**: Figure out how to do headless login.
 - **Available Players**: Search for available players categorized by position (Forwards, Defense, Goalies), and generate specific claims or drops from the team
 - **Full Automation for Data Upload**: Use SDKs (e.g., Google Cloud or AWS) to automate uploading data files.
 - **Advanced Visualization**: Add more charts and visual aids to show changes in team performance after applying recommendations.
