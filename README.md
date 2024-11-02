@@ -1,6 +1,6 @@
-# Fantasy Hockey Manager - Streamlit Application
+# Fantasy Hockey Analysis - Streamlit Application
 
-Welcome to the **Fantasy Hockey Manager**! This application leverages **Fantrax API**, **Google Gemini AI**, and **LangChain** to help you manage your fantasy hockey team effectively. You can view your current roster, available players, and receive AI-powered recommendations for improving your team's standing in the league.
+Welcome to the **Fantasy Hockey Analysis**! This application leverages **Google Gemini AI**, **LangChain**, and a forked version of **Fantrax API** to help you manage your fantasy hockey team effectively. You can view your current roster, available players, and receive AI-powered recommendations for improving your team's standing in the league.
 
 ## Features
 
@@ -16,7 +16,6 @@ Welcome to the **Fantasy Hockey Manager**! This application leverages **Fantrax 
 
 1. **Python 3.8+** is required.
 2. **Streamlit**, **Fantrax API**, **LangChain**, **Google Generative AI**, and other dependencies need to be installed.
-3. A **Google Cloud Storage** account to upload data files (optional).
 
 ### Installation Steps
 
@@ -43,7 +42,7 @@ Welcome to the **Fantasy Hockey Manager**! This application leverages **Fantrax 
    Start the Streamlit application.
 
    ```sh
-   streamlit run app.py
+   streamlit run Team_Standings_and_Rosters.py
    ```
 
 ### File Structure
@@ -63,7 +62,7 @@ Welcome to the **Fantasy Hockey Manager**! This application leverages **Fantrax 
 ## Technologies Used
 
 - **Streamlit**: Web framework for building the UI of the app.
-- **Fantrax API**: Fetch data such as roster, available players, and standings.
+- **Fantrax API**: A forked version to fetch data such as roster, available players, and standings.
 - **LangChain & Google Generative AI (Gemini)**: To interact with Google Gemini for generating strategic recommendations.
 
 ## Future Improvements
