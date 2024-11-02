@@ -9,11 +9,11 @@ from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 from requests import Session
 from streamlit.runtime.scriptrunner import RerunException
+import utils
 
 
 st.set_page_config(page_title="Team Roster")
 st.title("Fantrax Fantasy Hockey Analysis")
-st.markdown("## Team Selection and Roster")
 
 # *** SIDEBAR ***
 if 'league_id' not in st.session_state:
@@ -54,14 +54,13 @@ if not st.session_state.get('logged_in', False):
             st.session_state['session'] = session
             st.session_state['logged_in'] = True
 
-        except Exception as e:
+        except (webdriver.common.exceptions.WebDriverException, pickle.PickleError) as e:
             st.sidebar.error(f"Login failed: {str(e)}")
 else:
     # If already logged in, show logout button
     if st.sidebar.button("Logout"):
         # Clear all keys from session state
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
+        st.session_state.clear()
         
         # Force a rerun to refresh the UI
         st.experimental_set_query_params()
@@ -75,6 +74,13 @@ if 'logged_in' in st.session_state and st.session_state['logged_in']:
     if st.session_state['league_id']:
         try:
             api = FantraxAPI(st.session_state['league_id'], session=st.session_state['session'])
+            st.markdown("## Current League Standings")
+            st.markdown("#### Standings - Point Totals")
+            standings_collection = api.standings()
+            df = utils.standings_to_dataframe(standings_collection, "Standings - Point Totals ")
+            st.dataframe(df)
+                        
+            st.markdown("## Team Selection and Roster")
             teams = api.teams 
             if teams:
                 team_dict = {team.name: team.team_id for team in teams}
@@ -93,15 +99,13 @@ if 'logged_in' in st.session_state and st.session_state['logged_in']:
 
             # Display roster
             roster = api.roster_info(team_dict[selected_team_name])
-            st.markdown(f"### {roster.team.name} Roster")
+            st.markdown(f"#### {roster.team.name} Roster")
             st.write(f"Active: {roster.active}, Reserve: {roster.reserve}, Injured: {roster.injured}, Max: {roster.max}")
-    
-            from utils import roster_to_dataframe
-            st.dataframe(roster_to_dataframe(roster))
-        except Exception as e:
+            st.dataframe(utils.playerstats_to_dataframe(roster))
+        except (KeyError, AttributeError) as e:
             st.error(f"Error fetching teams: {str(e)}")
 
-        except Exception as e:
+        except (KeyError, AttributeError) as e:
             st.error(f"Error fetching league data: {str(e)}")
 else:
     st.info("Please log in using the sidebar to proceed.")

@@ -3,4 +3,11 @@ requests
 selenium
 webdriver-manager
 pandas
-#fantraxapi
+json
+pickle
+git+https://github.com/ejde/fantraxapi
+
+# For Recommendations
+langchain_google_genai
+langchain
+langchain-community
