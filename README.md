@@ -1,6 +1,6 @@
-# Fantasy Hockey Analysis - Streamlit Application
+# Fantrax Fantasy Hockey Analysis - Streamlit Application
 
-Welcome to the **Fantasy Hockey Analysis**! This application leverages **Google Gemini AI**, **LangChain**, and a forked version of **Fantrax API** to help you manage your fantasy hockey team effectively. You can view your current roster, available players, and receive AI-powered recommendations for improving your team's standing in the league.
+Welcome to the **Fantrax Fantasy Hockey Analysis** app! This application leverages **Google Gemini AI**, **LangChain**, and a forked version of **Fantrax API** to help you manage your fantasy hockey team effectively. You can view your current roster, available players, and receive AI-powered recommendations for improving your team's standing in the league. Built to play around with fantasy hockey data and LLM-tech.
 
 ## Features
 
@@ -31,10 +31,10 @@ Welcome to the **Fantasy Hockey Analysis**! This application leverages **Google 
    pip install -r requirements.txt
    ```
 
-3. **Set Up Environment Variables**
-
-   - **Fantrax Credentials**: Set up environment variables or configure your session in `app.py` for logging in to Fantrax.
-   - **Google API Key**: Obtain an API key for Google Gemini and store it as an environment variable or in a configuration file.
+3. **Set Up Optional Secret Environment Variables**
+   - **Google API Key**: Obtain an API key for Google Gemini and store it in the `./streamlit/secrets.toml` file with the key `gemini_key`. Used in concert with `league_whitelist`, will bypass entering the API key on every render.
+   - **League Whitelist**: List of league ids where we want to use the `gemini_key` above to skip entering the API key on every render.
+   - **Default Stats**: For rotisserie based leagues, you can establish a default stat to display in the `default_stat` variable in `secrets.toml`
 
 4. **Run the Application**
    Start the Streamlit application.
@@ -46,7 +46,6 @@ Welcome to the **Fantasy Hockey Analysis**! This application leverages **Google 
 ### File Structure
 
 - **appy.py**: Main entry point for the Streamlit application, which initializes the session, shows the league standings and AI-powered recommendations.
-- **Available_Players**: In Development
 - **utils.py**: Helper functions for transforming data to a usable format.
 - **requirements.txt**: Lists the required packages for running the app.
 
@@ -64,15 +63,13 @@ Welcome to the **Fantasy Hockey Analysis**! This application leverages **Google 
 
 ## Future Improvements
 
-- **Available Players**: Search for available players categorized by position (Forwards, Defense, Goalies), and generate specific claims or drops from the team
-- **Full Automation for Data Upload**: Use SDKs (e.g., Google Cloud or AWS) to automate uploading data files.
+- **Find players**: Search for available players based on recommendations, and generate specific claims or drops from the team. Will likely experiment with langchain, an agent framework or the assistants API from OpenAI.
 - **Advanced Visualization**: Add more charts and visual aids to show changes in team performance after applying recommendations.
 - **User Preferences**: Allow customization of AI recommendation settings, such as risk tolerance or positional needs.
 
 ## Troubleshooting
 
 - **Cannot Connect to Google Gemini**: Check your API key and ensure it is correctly set in the environment variables.
-- **Session State Issues**: Ensure that Streamlit session state (`st.session_state`) is being correctly updated across pages.
 - **Button Actions Not Reflecting**: Sometimes buttons may need to use `st.experimental_set_query_params()` for proper reruns.
 
 ## Contributions
