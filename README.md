@@ -63,7 +63,6 @@ Welcome to the **Fantrax Fantasy Hockey Analysis** app! This application leverag
 
 ## Future Improvements
 
-- **Find players**: Search for available players based on recommendations, and generate specific claims or drops from the team. Will likely experiment with langchain, an agent framework or the assistants API from OpenAI.
 - **Advanced Visualization**: Add more charts and visual aids to show changes in team performance after applying recommendations.
 - **User Preferences**: Allow customization of AI recommendation settings, such as risk tolerance or positional needs.
 
