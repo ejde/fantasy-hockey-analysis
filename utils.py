@@ -1,21 +1,4 @@
 import pandas as pd
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
-
-def initialize_driver():
-    service = Service()
-    options = Options()
-    options.add_argument("--headless")
-    options.add_argument("--disable-gpu")
-    options.add_argument("--window-size=1920,1080")
-    options.add_argument("--disable-blink-features=AutomationControlled")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)")
-    options.add_experimental_option('excludeSwitches', ['enable-automation'])
-    options.add_experimental_option('useAutomationExtension', False)
-    return webdriver.Chrome(service=service, options=options)
 
 def playerstats_to_dataframe(players):
     player_data = []
@@ -50,9 +33,3 @@ def standings_to_dataframe(standings_collection, stat_table):
                     record_data.update(record.data)
                     team_records_data.append(record_data)
                 return pd.DataFrame(team_records_data)
-
-
-# Create a function to add HTML tooltips to your DataFrame
-def add_tooltips(df, column):
-    df[column] = df[column].apply(lambda x: f'<span title="{x}">{x[:250]}...</span>' if len(x) > 30 else x)
-    return df.to_html(escape=False)

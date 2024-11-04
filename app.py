@@ -10,6 +10,9 @@ import pandas as pd
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
 
 from langchain_google_genai.chat_models import ChatGoogleGenerativeAI
 from langchain.schema import HumanMessage
@@ -21,6 +24,20 @@ logging.basicConfig(filename='selenium.log', level=logging.INFO, format='%(ascti
 st.title("Fantrax Fantasy Hockey Analysis")
 
 # *** SOME HELPERS ***
+def initialize_driver():
+    service = Service()
+    options = Options()
+    options.add_argument("--headless")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--window-size=1920,1080")
+    options.add_argument("--disable-blink-features=AutomationControlled")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)")
+    options.add_experimental_option('excludeSwitches', ['enable-automation'])
+    options.add_experimental_option('useAutomationExtension', False)
+    return webdriver.Chrome(service=service, options=options)
+
 def login_to_fantrax(username, password):
     driver = utils.initialize_driver()
     wait = WebDriverWait(driver, 10)
