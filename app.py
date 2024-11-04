@@ -39,7 +39,7 @@ def initialize_driver():
     return webdriver.Chrome(service=service, options=options)
 
 def login_to_fantrax(username, password):
-    driver = utils.initialize_driver()
+    driver = initialize_driver()
     wait = WebDriverWait(driver, 10)
     try:
         logging.info("Navigating to the Fantrax login page.")
