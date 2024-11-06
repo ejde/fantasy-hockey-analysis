@@ -1,4 +1,5 @@
 import pandas as pd
+import streamlit as st
 
 def playerstats_to_dataframe(players):
     player_data = []
@@ -20,10 +21,10 @@ def playerstats_to_dataframe(players):
     
     return df
 
-def standings_to_dataframe(standings_collection, stat_table):
+def standings_to_dataframe(standings_collection, stat_table=None):
     for section in standings_collection.standings:
         for caption, standings in section.items():
-            if caption == stat_table:
+            if caption == stat_table or stat_table is None: #ugh, will enter the first run through
                 team_records_data = []
                 for record in standings.team_records:
                     record_data = {
@@ -33,3 +34,34 @@ def standings_to_dataframe(standings_collection, stat_table):
                     record_data.update(record.data)
                     team_records_data.append(record_data)
                 return pd.DataFrame(team_records_data)
+            
+def fetch_standings(api):
+    try:
+        if 'standings_collection' not in st.session_state:
+            standings_collection = api.standings()
+            st.session_state['standings_collection'] = standings_collection
+        else:
+            standings_collection = st.session_state['standings_collection']
+
+        if st.secrets.get("default_stat"):
+            stats = st.secrets["default_stat"]
+
+        standings_df = standings_to_dataframe(standings_collection, stats)
+        return standings_df
+    except Exception as e:
+        st.error(f"Error fetching league standings: {e}")
+        return None
+
+def fetch_team_roster(api, team_id):
+    try:
+        if 'roster' not in st.session_state:
+            roster = api.roster_info(team_id)
+            st.session_state['roster'] = roster
+        else:
+            roster = st.session_state['roster']
+
+        roster_df = playerstats_to_dataframe(roster)
+        return roster_df
+    except Exception as e:
+        st.error(f"Error fetching roster: {e}")
+        return None        

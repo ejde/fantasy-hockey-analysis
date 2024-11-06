@@ -15,7 +15,8 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 
 from langchain_google_genai.chat_models import ChatGoogleGenerativeAI
-from langchain.schema import HumanMessage
+
+from fantraxapi import FantraxAPI
 
 import utils
 
@@ -103,25 +104,26 @@ def fetch_and_display_standings(api):
         else:
             stats = st.selectbox("Choose your Stat:", stats_tables, index=0)
 
-        st.markdown(f"#### {stats}")
         standings_df = utils.standings_to_dataframe(standings_collection, stats)
+        
+        st.markdown(f"#### {stats}")
         st.dataframe(standings_df)
+        
         return standings_df
     except Exception as e:
         st.error(f"Error fetching league standings: {e}")
         return None
 
-def fetch_and_display_team_roster(api, team_dict):
-    #selected_team_name = st.selectbox("Choose your team:", list(team_dict.keys()))
-    #selected_team_id = team_dict[selected_team_name]
+def fetch_and_display_team_roster(api):
     st.session_state['selected_team_name'] = api.default_team_name
     st.session_state['selected_team_id'] = api.default_team_id
     
     try:
-        roster = api.roster_info(api.default_team_id)
+        roster_df = utils.fetch_team_roster(api, st.session_state['selected_team_id'])
+        roster = st.session_state['roster']
+
         st.markdown(f"#### {roster.team.name} Roster")
         st.write(f"Active: {roster.active}, Reserve: {roster.reserve}, Injured: {roster.injured}, Max: {roster.max}")
-        roster_df = utils.playerstats_to_dataframe(roster)
         st.dataframe(roster_df)
         return roster_df
     except Exception as e:
@@ -133,15 +135,14 @@ def fetch_free_agents(api, position):
     if available_players and hasattr(available_players, 'rows') and available_players.rows:
         df = utils.playerstats_to_dataframe(available_players)
         df['RkOv'] = df['RkOv'].astype(int)
-        df = df.sort_values(by='RkOv', ascending=True).head(3)
+        df = df.sort_values(by='RkOv', ascending=True).head(2)
         return df.to_dict(orient='records')
     else:
         return None
 
-def generate_recommendations(chat_model, prompt):
-    human_message = HumanMessage(content=prompt)
+def generate_recommendations(prompt):
     try:
-        response = chat_model([human_message])
+        response = chat_model.invoke(prompt)
         if response:
             return response.content
     except Exception as e:
@@ -157,9 +158,6 @@ def run_player_evaluation(api, context):
                 for p in fa:
                     free_agents.append(p)
 
-        if free_agents is None:
-            return []
-        
         evaluations = []
         for player in free_agents:
             evaluation_prompt = f"""
@@ -168,7 +166,7 @@ def run_player_evaluation(api, context):
             In addition, give reasons why you think this player is a good fit but keep it concise. Use the following response template:
             [Player Name] - [Position]: [Reason in relation to team and recommendations]
             """               
-            response = generate_recommendations(chat_model, evaluation_prompt)
+            response = generate_recommendations(evaluation_prompt)
             if response:
                 if 'yes, this player is a good fit' in response.lower():
                     evaluations.append({"player": player, "evaluation": response})
@@ -189,73 +187,62 @@ else:
         raise RerunException(None)
 
 # *** MAIN ROSTER PAGE ***
-from fantraxapi import FantraxAPI
 if 'logged_in' in st.session_state and st.session_state['logged_in']:
     api = FantraxAPI(st.session_state['league_id'], session=st.session_state['session'])
     standings_df = fetch_and_display_standings(api)
+    roster_df = fetch_and_display_team_roster(api)
 
-    if standings_df is not None:
-        teams = api.teams
-        if teams:
-            team_dict = {team.name: team.team_id for team in teams}
-            roster_df = fetch_and_display_team_roster(api, team_dict)
+    if standings_df is not None and roster_df is not None:
+        # Prompt and Recommendations
+        input_data = {
+            "current_roster": json.loads(roster_df.to_json(orient="records")),
+            "standings": json.loads(standings_df.to_json(orient="records"))
+        }
 
-            # Prompt and Recommendations
-            input_data = {
-                "current_roster": json.loads(roster_df.to_json(orient="records")),
-                "standings": json.loads(standings_df.to_json(orient="records"))
-            }
+        recommendation_prompt = f"""
+        You are an expert fantasy hockey advisor. Analyze the current roster and league standings to suggest improvements for {st.session_state['selected_team_name']}.
+        #### Current Roster: {json.dumps(input_data['current_roster'], indent=2)}
+        #### League Standings: {json.dumps(input_data['standings'], indent=2)}
+        #### Instructions:
+        * Be detailed in your analysis and provide a clear rationale for each recommendation using the template below.
+        * If the recommendation is to pick up players, mention the characteristics of the player that would be useful for the team as it will be used to search through the list of free agents to add.
+        * If there are players on the current roster that the team should drop and mention their names and your reasons to consider dropping them.
+        * Keep your response concise, no more than 300 words. Use the response template below.
+        #### Template
+        #### Current Situation:
+        [Team Name] is currently ranked [Current Rank] in the league, with a points total of [Points Total]. While this position shows that the team is competitive, there are certain areas that lag behind the top teams. Specific areas of concern include:
+        * [Statistic 1]: (e.g., Goals: The team has [X] goals, but the top teams are consistently outperforming in this category.)
+        * [Statistic 2]: (e.g., Assists: [X] assists is respectable, but the top teams are significantly higher.)
+        * [Goalie Statistic]: (e.g., Goaltending stats like shutouts and save percentage fall slightly below the league average, impacting overall points.)
+        * Overall Performance: (e.g., Combined goals and assists fall below the top-ranked teams.)
+            * Top Performers: (e.g. Auston Matthews has the highest goals, etc.)
+            * Bottom Performers: (e.g. Conner McDavid is underperforming, etc.)
+        #### Recommendations:
+        1. [Focus Area 1 - Improvement Area]
+            * Recommendation: (e.g., Acquire a high-scoring forward with a strong track record of points. Look for players who consistently score 10+ goals or provide 15+ assists.)
+            * Rationale: (e.g., Improving point production is critical to closing the gap between [Team Name] and the top-ranked teams. Current players lack high point-scoring consistency, and acquiring such a forward will elevate the overall score.)
+        2. [Focus Area 2 - Improvement Area]
+            * Recommendation: (e.g., Strengthen goaltending by seeking a goalie with a save percentage above .910 and a record of shutouts.)
+            * Rationale: (e.g., Boosting goaltending stats, particularly shutouts and save percentage, will lead to consistent wins and more fantasy points. This area has been a key differentiator for the higher-ranked teams.)      
+        """            
 
-            recommendation_prompt = f"""
-            You are an expert fantasy hockey advisor. Analyze the current roster and league standings to suggest improvements for {st.session_state['selected_team_name']}.
-            #### Current Roster: {json.dumps(input_data['current_roster'], indent=2)}
-            #### League Standings: {json.dumps(input_data['standings'], indent=2)}
-            #### Instructions:
-            Be detailed in your analysis and provide a clear rationale for each recommendation using the template below.
-            If the recommendation is to pick up players, mention the characteristics of the player that would be useful for the team as it will be used to search through the list of free agents to add.
-            If there are players on the current roster that the team should drop and mention their names and your reasons to consider dropping them.
-            Keep your response concise, no more than 300 words. Use the response template below.
-            #### Template
-            #### Current Situation:
-            [Team Name] is currently ranked [Current Rank] in the league, with a points total of [Points Total]. While this position shows that the team is competitive, there are certain areas that lag behind the top teams. Specific areas of concern include:
-            * [Statistic 1]: (e.g., Goals: The team has [X] goals, but the top teams are consistently outperforming in this category.)
-            * [Statistic 2]: (e.g., Assists: [X] assists is respectable, but the top teams are significantly higher.)
-            * [Goalie Statistic]: (e.g., Goaltending stats like shutouts and save percentage fall slightly below the league average, impacting overall points.)
-            * Overall Performance: (e.g., Combined goals and assists fall below the top-ranked teams.)
-              * Top Performers: (e.g. Auston Matthews has the highest goals, etc.)
-              * Bottom Performers: (e.g. Conner McDavid is underperforming, etc.)
-
-            #### Recommendations:
-            1. [Focus Area 1 - Improvement Area]
-              * Recommendation: (e.g., Acquire a high-scoring forward with a strong track record of points. Look for players who consistently score 10+ goals or provide 15+ assists.)
-              * Rationale: (e.g., Improving point production is critical to closing the gap between [Team Name] and the top-ranked teams. Current players lack high point-scoring consistency, and acquiring such a forward will elevate the overall score.)
-            2. [Focus Area 2 - Improvement Area]
-              * Recommendation: (e.g., Strengthen goaltending by seeking a goalie with a save percentage above .910 and a record of shutouts.)
-              * Rationale: (e.g., Boosting goaltending stats, particularly shutouts and save percentage, will lead to consistent wins and more fantasy points. This area has been a key differentiator for the higher-ranked teams.)
-            3. [Focus Area 3 - Improvement Area]
-              * Recommendation: (e.g., Add a defenseman known for a strong plus/minus rating to improve both defensive support and offensive play.)
-              * Rationale: (e.g., A defenseman with a strong plus/minus is valuable not only for defensive stability but also for contributing to goals and assists, enhancing the team’s offensive structure.)         
-            """            
-
-            if st.session_state['league_id'] in st.secrets.get("league_whitelist", []):
-                llm_api_key = st.secrets.get("gemini_key")
-            else:
-                llm_api_key = st.text_input("Enter your Google Generative AI API key:", type="password")     
-
-            if llm_api_key:
-                chat_model = ChatGoogleGenerativeAI(model='gemini-1.5-flash-8b', google_api_key=llm_api_key, temperature=0.8)
-                response_content = generate_recommendations(chat_model, recommendation_prompt)
-                if response_content:
-                    st.subheader(f"Recommendations for Team: {st.session_state['selected_team_name']}")
-                    st.write(response_content)
-                    context = {"recommendation": response_content}
-                    evaluations = run_player_evaluation(api, context)
-                    
-                    if evaluations:
-                        st.markdown("#### Possible Free Agents to Add")
-                        for eval in evaluations:
-                            st.markdown(f"* {eval['evaluation']}")               
+        if st.session_state['league_id'] in st.secrets.get("league_whitelist", []):
+            llm_api_key = st.secrets.get("gemini_key")
         else:
-            st.warning("No teams found in this league.")
+            llm_api_key = st.text_input("Enter your Google Generative AI API key:", type="password")     
+
+        if llm_api_key:
+            chat_model = ChatGoogleGenerativeAI(model='gemini-1.5-flash-8b', google_api_key=llm_api_key, temperature=0.8)
+            response_content = generate_recommendations(recommendation_prompt)
+            if response_content:
+                st.subheader(f"Recommendations for Team: {st.session_state['selected_team_name']}")
+                st.write(response_content)
+                context = {"recommendation": response_content}
+                evaluations = run_player_evaluation(api, context)
+                
+                if evaluations:
+                    st.markdown("#### Possible Free Agents to Add")
+                    for eval in evaluations:
+                        st.markdown(f"* {eval['evaluation']}")               
 else:
     st.info("Please log in using the sidebar to proceed.")

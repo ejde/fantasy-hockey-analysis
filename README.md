@@ -5,8 +5,8 @@ Welcome to the **Fantrax Fantasy Hockey Analysis** app! This application leverag
 ## Features
 
 - **Login and Session Management**: Authenticate with your Fantrax account to access private league information.
-- **Team Selection**: Easily select a team from your league and view the roster.
 - **AI-Powered Recommendations**: Google Gemini provides personalized recommendations to enhance your team's standing.
+- **Chat with your Team**: Chat with the team, where user is the GM and the chatbot acts as the head coach.
 
 ## How to Run the Application Locally
 
@@ -20,8 +20,8 @@ Welcome to the **Fantrax Fantasy Hockey Analysis** app! This application leverag
 1. **Clone the Repository**
 
    ```sh
-   git clone https://github.com/yourusername/fantasy-hockey-manager.git
-   cd fantasy-hockey-manager
+   git clone https://github.com/yourusername/fantasy-hockey-analysis.git
+   cd fantasy-hockey-analysis
    ```
 
 2. **Install Dependencies**
@@ -40,25 +40,25 @@ Welcome to the **Fantrax Fantasy Hockey Analysis** app! This application leverag
    Start the Streamlit application.
 
    ```sh
-   streamlit run app.py
+   streamlit run Home.py
    ```
 
 ### File Structure
 
-- **appy.py**: Main entry point for the Streamlit application, which initializes the session, shows the league standings and AI-powered recommendations.
+- **Home.py**: Main entry point for the Streamlit application, which initializes the session, shows the league standings and AI-powered recommendations.
+- **Chat_With_Yer_Team.py**: Chatbot functionality
 - **utils.py**: Helper functions for transforming data to a usable format.
 - **requirements.txt**: Lists the required packages for running the app.
 
 ## Usage
 
-1. **Login**: Use your Fantrax credentials to log in.
-2. **Select a Team**: Choose your team from the dropdown list.
-4. **Generate Recommendations**: View AI-powered suggestions for player acquisitions, drops, or trades to improve your standings.
+1. **Login**: Use your Fantrax credentials to log in on the Home page
+2. **Chat with your team**: Chat with the team, where the user is the GM and the chatbot acts as the head coach.
 
 ## Technologies Used
 
 - **Streamlit**: Web framework for building the UI of the app.
-- **Fantrax API**: A forked version to fetch data such as roster, available players, and standings.
+- **Fantrax API**: A forked version supporting rotisserie based leagues, to fetch data such as roster, available players, and standings. Will try to get these into upstream master at some point.
 - **LangChain & Google Generative AI (Gemini)**: To interact with Google Gemini for generating strategic recommendations.
 
 ## Future Improvements

@@ -5,6 +5,8 @@ webdriver-manager
 pandas
 #json
 #pickle
+#random
+#time
 git+https://github.com/ejde/fantraxapi
 
 # For Recommendations
