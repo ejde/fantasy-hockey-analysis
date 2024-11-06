@@ -1,6 +1,8 @@
 # Fantrax Fantasy Hockey Analysis - Streamlit Application
 
-Welcome to the **Fantrax Fantasy Hockey Analysis** app! This application leverages **Google Gemini AI**, **LangChain**, and a forked version of **Fantrax API** to help you manage your fantasy hockey team effectively. You can view your current roster, available players, and receive AI-powered recommendations for improving your team's standing in the league. Built to play around with fantasy hockey data and LLM-tech.
+Welcome to the **Fantrax Fantasy Hockey Analysis** app! This application leverages **Google Gemini AI**, **LangChain**, and a forked version of **Fantrax API** to help you manage your fantasy hockey team effectively. You can view your current roster, available players, and receive AI-powered recommendations for improving your team's standing in the league. Built to play around with fantasy hockey data and LLM-tech with my family's league. And to find a way to win! Available at [Streamlit Community Cloud](https://fantasy-hockey-llm.streamlit.app/) For those without a Fantrax League, you can see a short video demo here.
+
+https://github.com/user-attachments/assets/81570088-64d6-4bff-b349-acf3593be1df
 
 ## Features
 
@@ -65,6 +67,7 @@ Welcome to the **Fantrax Fantasy Hockey Analysis** app! This application leverag
 
 - **Advanced Visualization**: Add more charts and visual aids to show changes in team performance after applying recommendations.
 - **User Preferences**: Allow customization of AI recommendation settings, such as risk tolerance or positional needs.
+- **Expand the data source for the LLM**: Agents, of course.
 
 ## Troubleshooting
 
