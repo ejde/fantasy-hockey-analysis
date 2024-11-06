@@ -162,7 +162,8 @@ def run_player_evaluation(api, context):
         for player in free_agents:
             evaluation_prompt = f"""
             Given the following player details: {player}, and the context: {context}, determine if this player is a good fit for the team. 
-            Respond with 'Yes, this player is a good fit' or 'No, this player is not a good fit'. Mention the player's name in your response. 
+            Respond with 'Yes, this player is a good fit' or 'No, this player is not a good fit'. Mention the player's name in your response.
+            If there is an obvious choice for who this player should replace on the roster, say so. 
             In addition, give reasons why you think this player is a good fit but keep it concise. Use the following response template:
             [Player Name] - [Position]: [Reason in relation to team and recommendations]
             """               
@@ -207,7 +208,7 @@ if 'logged_in' in st.session_state and st.session_state['logged_in']:
         * Be detailed in your analysis and provide a clear rationale for each recommendation using the template below.
         * If the recommendation is to pick up players, mention the characteristics of the player that would be useful for the team as it will be used to search through the list of free agents to add.
         * If there are players on the current roster that the team should drop and mention their names and your reasons to consider dropping them.
-        * Keep your response concise, no more than 300 words. Use the response template below.
+        * Keep your response concise, no more than 275 words. Use the response template below.
         #### Template
         #### Current Situation:
         [Team Name] is currently ranked [Current Rank] in the league, with a points total of [Points Total]. While this position shows that the team is competitive, there are certain areas that lag behind the top teams. Specific areas of concern include:
