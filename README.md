@@ -49,6 +49,7 @@ https://github.com/user-attachments/assets/887e44c9-714a-46f3-bfd5-6e0d17aabfb5
 
 - **Home.py**: Main entry point for the Streamlit application, which initializes the session, shows the league standings and AI-powered recommendations.
 - **Chat_With_Yer_Team.py**: Chatbot functionality
+- **Agent_Chat**: Preliminary work on using langchat agent for the chat boot, utilizing tools. Big OpenAI token hog, so keeping it hidden for now.
 - **utils.py**: Helper functions for transforming data to a usable format.
 - **requirements.txt**: Lists the required packages for running the app.
 

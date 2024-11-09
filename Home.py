@@ -129,17 +129,8 @@ def fetch_and_display_team_roster(api):
     except Exception as e:
         st.error(f"Error fetching roster: {e}")
         return None        
-    
-def fetch_free_agents(api, position):
-    available_players = api.get_available_players(position)
-    if available_players and hasattr(available_players, 'rows') and available_players.rows:
-        df = utils.playerstats_to_dataframe(available_players)
-        df['RkOv'] = df['RkOv'].astype(int)
-        df = df.sort_values(by='RkOv', ascending=True).head(2)
-        return df.to_dict(orient='records')
-    else:
-        return None
 
+@st.cache_data(show_spinner=True)
 def generate_recommendations(prompt):
     try:
         response = chat_model.invoke(prompt)
@@ -152,25 +143,27 @@ def generate_recommendations(prompt):
 def run_player_evaluation(api, context):
     try:
         free_agents = []
+        evaluations = []
         for position in ['F','D','G']:
-            fa = fetch_free_agents(api, position)
+            fa = utils.fetch_free_agents(api, position)
             if fa is not None:
                 for p in fa:
                     free_agents.append(p)
 
-        evaluations = []
-        for player in free_agents:
-            evaluation_prompt = f"""
-            Given the following player details: {player}, and the context: {context}, determine if this player is a good fit for the team. 
-            Respond with 'Yes, this player is a good fit' or 'No, this player is not a good fit'. Mention the player's name in your response.
-            Because of limited roster space, you should mention who a player we'd like to add should replace on the current roster. This will make it easier for the user to decide.
-            In addition, give reasons why you think this player is a good fit and mention key stats, but keep it concise. Use the following response template:
-            [Player Name] - [Position]: [Reason in relation to team and recommendations]
-            """               
-            response = generate_recommendations(evaluation_prompt)
-            if response:
-                if 'yes, this player is a good fit' in response.lower():
-                    evaluations.append({"player": player, "evaluation": response})
+            for player in free_agents:
+                evaluation_prompt = f"""
+                    Given the player details {player} and the context {context}, evaluate if this player is a good fit for the team.
+                    If adding this player, suggest who they should replace on the current roste. Provide concise reasons using key stats. Use the following template:
+                    - **[Player Name]** is a good fit for [Position]: [Reason in relation to team needs and recommendations], or
+                    - **[Player Name]** is a not good fit for [Position]: [Reason in relation to team needs and recommendations] 
+                """               
+                response = generate_recommendations(evaluation_prompt)
+                if response:
+                    if 'is a good fit' in response.lower():
+                        evaluations.append({"player": player, "evaluation": response})
+                        free_agents = []
+                        break
+        
         return evaluations
     except Exception as e:
         print(f"Error during player evaluation execution: {e}")
@@ -201,30 +194,30 @@ if 'logged_in' in st.session_state and st.session_state['logged_in']:
         }
 
         recommendation_prompt = f"""
-        You are an expert fantasy hockey advisor. Analyze the current roster and league standings to suggest improvements for {st.session_state['selected_team_name']}.
-        #### Current Roster: {json.dumps(input_data['current_roster'], indent=2)}
-        #### League Standings: {json.dumps(input_data['standings'], indent=2)}
-        #### Instructions:
-        * Be detailed in your analysis and provide a clear rationale for each recommendation using the template below.
-        * If the recommendation is to pick up players, mention the characteristics of the player that would be useful for the team as it will be used to search through the list of free agents to add.
-        * If there are underperforming players on the current roster that the team should drop and mention their names and your reasons to consider dropping them. Don't sugarcoat things.
-        * Keep your response concise, no more than 275 words. Use the response template below.
-        #### Template
-        #### Current Situation:
-        [Team Name] is currently ranked [Current Rank] in the league, with a points total of [Points Total]. While this position shows that the team is competitive, there are certain areas that lag behind the top teams. Specific areas of concern include:
-        * [Statistic 1]: (e.g., Goals: The team has [X] goals, but the top teams are consistently outperforming in this category.)
-        * [Statistic 2]: (e.g., Assists: [X] assists is respectable, but the top teams are significantly higher.)
-        * [Goalie Statistic]: (e.g., Goaltending stats like shutouts and save percentage fall slightly below the league average, impacting overall points.)
-        * Overall Performance: (e.g., Combined goals and assists fall below the top-ranked teams.)
-            * Top Performers: (e.g. Auston Matthews has the highest goals, etc.)
-            * Bottom Performers: (e.g. Conner McDavid is underperforming, etc.)
-        #### Recommendations:
-        1. [Focus Area 1 - Improvement Area]
-            * Recommendation: (e.g., Acquire a high-scoring forward with a strong track record of points. Look for players who consistently score 10+ goals or provide 15+ assists.)
-            * Rationale: (e.g., Improving point production is critical to closing the gap between [Team Name] and the top-ranked teams. Current players lack high point-scoring consistency, and acquiring such a forward will elevate the overall score.)
-        2. [Focus Area 2 - Improvement Area]
-            * Recommendation: (e.g., Strengthen goaltending by seeking a goalie with a save percentage above .910 and a record of shutouts.)
-            * Rationale: (e.g., Boosting goaltending stats, particularly shutouts and save percentage, will lead to consistent wins and more fantasy points. This area has been a key differentiator for the higher-ranked teams.)      
+            You are an expert fantasy hockey advisor. Analyze the current roster and league standings to suggest improvements for {st.session_state['selected_team_name']}.
+            Current Roster: {json.dumps(input_data['current_roster'], indent=2)}
+            League Standings: {json.dumps(input_data['standings'], indent=2)}
+            Instructions:
+            - Provide a detailed analysis of the team's strengths and weaknesses. Use the response template provided.
+            - Recommend actions: pick up, drop, or trade players. Justify each recommendation with specific statistics.
+            - For player pickups, describe desired characteristics (e.g., high goal-scoring ability) to assist in searching free agents.
+            - Be blunt when assessing underperformers—no sugarcoating - name players explicitly when assessing underperformers.
+            - Keep responses to 275 words max.
+            Response Template:
+            Current Situation: [Team Name] is ranked [Current Rank] with [Points Total] points. Areas that need improvement include:
+            - Statistic 1: (e.g., Goals: [X], below league leaders.)
+            - Statistic 2: (e.g., Assists: [X], significantly lower than the top teams.)
+            - Goalie Stats: (e.g., Save percentage and shutouts fall below league average.)
+            - Overall Performance: [Team Name] lags in combined offensive and defensive stats.
+            - Top Performers: (e.g., [Top Player] excels in goals/assists.)
+            - Bottom Performers: (e.g., [Underperforming Player] is falling short.)
+            Recommendations:
+              * Focus Area 1:
+                - Recommendation: (e.g., Acquire a high-scoring forward. Look for consistent scorers with 10+ goals or 15+ assists.)
+                - Rationale: (e.g., More scoring power is key to closing the gap with the league leaders.)
+              * Focus Area 2:
+                - Recommendation: (e.g., Improve goaltending by adding a goalie with a save percentage above .910.)
+                - Rationale: (e.g., Stronger goaltending will improve point stability and boost ranking.) 
         """            
 
         if st.session_state['league_id'] in st.secrets.get("league_whitelist", []):
@@ -244,6 +237,6 @@ if 'logged_in' in st.session_state and st.session_state['logged_in']:
                 if evaluations:
                     st.markdown("#### Possible Free Agents to Add")
                     for eval in evaluations:
-                        st.markdown(f"* {eval['evaluation']}")               
+                        st.markdown(f"{eval['evaluation']}")               
 else:
     st.info("Please log in using the sidebar to proceed.")
