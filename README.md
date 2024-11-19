@@ -9,6 +9,7 @@ https://github.com/user-attachments/assets/887e44c9-714a-46f3-bfd5-6e0d17aabfb5
 - **Login and Session Management**: Authenticate with your Fantrax account to access private league information.
 - **AI-Powered Recommendations**: Google Gemini provides personalized recommendations to enhance your team's standing.
 - **Chat with your Team**: Chat with the team, where user is the GM and the chatbot acts as the head coach.
+- **Chat with your Team-Agent Style**: Coach has access to tools to answer your questions (search, roster, free-agent lookup). Results using `qwen2.5-coder:3b` underwhelming, so need to do more tuning.
 
 ## How to Run the Application Locally
 
@@ -37,6 +38,7 @@ https://github.com/user-attachments/assets/887e44c9-714a-46f3-bfd5-6e0d17aabfb5
    - **Google API Key**: Obtain an API key for Google Gemini and store it in the `./streamlit/secrets.toml` file with the key `gemini_key`. Used in concert with `league_whitelist`, will bypass entering the API key on every render.
    - **League Whitelist**: List of league ids where we want to use the `gemini_key` above to skip entering the API key on every render.
    - **Default Stats**: For rotisserie based leagues, you can establish a default stat to display in the `default_stat` variable in `secrets.toml`
+   - **Ollama info for Agent Chat**: For running locally, `ollama_server` points to your local Ollama instance and `ollama_model` is your model of choice. 
 
 4. **Run the Application**
    Start the Streamlit application.
@@ -49,7 +51,7 @@ https://github.com/user-attachments/assets/887e44c9-714a-46f3-bfd5-6e0d17aabfb5
 
 - **Home.py**: Main entry point for the Streamlit application, which initializes the session, shows the league standings and AI-powered recommendations.
 - **Chat_With_Yer_Team.py**: Chatbot functionality
-- **Agent_Chat**: Preliminary work on using langchat agent for the chat boot, utilizing tools. Big OpenAI token hog, so keeping it hidden for now.
+- **Chat_With_Yer_Team-Agent.py**: Chatbot uses OpenAI in cloud, or a local Ollama instance. Leverages tools for searching and looking up roster, free-agent and standings info.
 - **utils.py**: Helper functions for transforming data to a usable format.
 - **requirements.txt**: Lists the required packages for running the app.
 
@@ -68,7 +70,7 @@ https://github.com/user-attachments/assets/887e44c9-714a-46f3-bfd5-6e0d17aabfb5
 
 - **Advanced Visualization**: Add more charts and visual aids to show changes in team performance after applying recommendations.
 - **User Preferences**: Allow customization of AI recommendation settings, such as risk tolerance or positional needs.
-- **Expand the data source for the LLM**: Agents, of course.
+- **Tune the Agent Chat**: Experiment with different tooling, system instructions and LLMs.
 
 ## Troubleshooting
 

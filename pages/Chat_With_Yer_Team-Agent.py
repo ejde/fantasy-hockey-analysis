@@ -9,9 +9,11 @@ from langchain_core.tools import StructuredTool
 from langchain import hub
 from langchain_community.tools import TavilySearchResults
 from langchain.agents import AgentExecutor
+import ollama
+from langchain_ollama import OllamaLLM
 
 st.title("💬 Chat With Yer Team - Agent Style")
-st.text("This is a test")
+st.markdown("*WIP -- Uses Ollama when deployed locally (config in secrets.toml) or OpenAI when on cloud (beware token usage)*")
 
 if not st.session_state.get('logged_in'):
     st.info("Please log in using the sidebar on the main page to proceed.")
@@ -78,12 +80,16 @@ tools = [
     StructuredTool.from_function(search_game_scores, name="Search Game Scores", description="Search for recent game scores of a given team")
 ]
 
-if st.session_state['league_id'] in st.secrets.get("league_whitelist", []):
-    llm_api_key = st.secrets.get("openai_key")
-else:
-    llm_api_key = st.text_input("Enter your OpenAI API key:", type="password")
+def get_llm():
+    if st.secrets.get("ollama_server") and st.secrets.get("ollama_model"):
+        client = ollama.Client(host=st.secrets.get("ollama_server"))
+        llm = OllamaLLM(client=client, model=st.secrets.get("ollama_model"))
+    else:
+        llm_api_key = st.text_input("Enter your OpenAI API key:", type="password")
+        llm = ChatOpenAI(openai_api_key=llm_api_key, model_name="gpt-4o-mini")
+    return llm
 
-llm = ChatOpenAI(openai_api_key=llm_api_key, model_name="gpt-4o-mini")
+llm = get_llm()
 chat_prompt = hub.pull("danglesnipecelly/fantasy-hockey-coach")
 agent = create_structured_chat_agent(llm=llm, tools=tools, prompt=chat_prompt)
 
@@ -104,6 +110,7 @@ if prompt := st.chat_input("Are you ready? Good, cuz yer goin!"):
     prompt = prompt.replace('\n', ' \n')
     with st.chat_message("user"):
         st.markdown(prompt)
+    st.session_state.messages.append({'role': 'user', 'content': prompt})
     with st.chat_message("ai"):
         message_placeholder = st.empty()
         message_placeholder.markdown("S'YeahSo...")
@@ -111,12 +118,10 @@ if prompt := st.chat_input("Are you ready? Good, cuz yer goin!"):
         try:
             response = agent_executor({"input": prompt, "chat_history": st.session_state.messages})
             if isinstance(response, dict) and 'output' in response:
-                message_placeholder.markdown(response['output'])
-                st.session_state.messages.append({'role': 'ai', 'content': response['output']})
+                response_text = response['output']
             else:
-                message_placeholder.markdown(response)
-                st.session_state.messages.append({'role': 'ai', 'content': response})
+                response_text = response
+            message_placeholder.markdown(response_text)
+            st.session_state.messages.append({'role': 'ai', 'content': response_text})
         except Exception as e:
             st.exception(e)
-        
-        st.session_state.messages.append({'role': 'user', 'content': prompt})

@@ -15,3 +15,7 @@ langchain_openai
 langchain
 langchain-community
 tavily-python
+ollama
+langchain_ollama
+#huggingface_hub
+#transformers
