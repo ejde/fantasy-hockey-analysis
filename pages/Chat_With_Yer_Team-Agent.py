@@ -59,7 +59,7 @@ def fetch_opposing_team_roster(team_name):
 def fetch_user_team_name():
     return st.session_state['selected_team_name']
 
-def fetch_current_free_agents(position):
+def fetch_current_free_agents(position: str):
     return utils.fetch_free_agents(api, position)
 
 def search_player_news(query: str):
@@ -75,10 +75,16 @@ tools = [
     StructuredTool.from_function(fetch_league_standings, name="Fetch League Standings", description="Fetch the league standings"),
     StructuredTool.from_function(fetch_user_team_roster, name="Fetch User's Team Roster", description="Get the roster of the user's team"),
     StructuredTool.from_function(fetch_user_team_name, name="Fetch User's Team Name", description="Get the name of the user's team"),
-    StructuredTool.from_function(fetch_current_free_agents, name="Fetch Free Agents", description="Get a list of top available free agents of a given position, pass a string whose value is one of 'F', 'D' or 'G'"),
+    StructuredTool.from_function(fetch_current_free_agents, name="Fetch Free Agents", description="Get a list of top available free agents for a given position, pass a string whose value is one of 'F', 'D' or 'G'"),
     StructuredTool.from_function(fetch_opposing_team_roster, name="Fetch Opposing Team Roster", description="Get the roster of an opposing team for potential trades"),
     StructuredTool.from_function(search_game_scores, name="Search Game Scores", description="Search for recent game scores of a given team")
 ]
+
+# Properly format tools and tool_names for inclusion in the prompt
+chat_prompt_template = hub.pull("danglesnipecelly/fantasy-hockey-coach:e8792e65")
+
+
+chat_prompt = chat_prompt_template
 
 def get_llm():
     if st.secrets.get("ollama_server") and st.secrets.get("ollama_model"):
@@ -90,7 +96,7 @@ def get_llm():
     return llm
 
 llm = get_llm()
-chat_prompt = hub.pull("danglesnipecelly/fantasy-hockey-coach")
+
 agent = create_structured_chat_agent(llm=llm, tools=tools, prompt=chat_prompt)
 
 # Wrap the agent in an AgentExecutor to manage interaction flow
