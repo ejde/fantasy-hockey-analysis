@@ -1,5 +1,6 @@
 import streamlit as st
 from langchain_openai import ChatOpenAI
+from langchain_groq import ChatGroq
 import json
 from fantraxapi import FantraxAPI
 import utils
@@ -13,7 +14,6 @@ import ollama
 from langchain_ollama import OllamaLLM
 
 st.title("💬 Chat With Yer Team - Agent Style")
-st.markdown("*WIP -- Uses Ollama when deployed locally (config in secrets.toml) or OpenAI when on cloud (beware token usage)*")
 
 if not st.session_state.get('logged_in'):
     st.info("Please log in using the sidebar on the main page to proceed.")
@@ -45,7 +45,9 @@ input_data = {
 }
 
 def fetch_league_standings():
-    return utils.fetch_standings(api)
+    standings = utils.fetch_standings(api)
+    standings['is_my_team'] = standings['team'].apply(lambda x: str(x).lower() == st.session_state['selected_team_name'].lower())
+    return standings
 
 def fetch_user_team_roster():
     return utils.fetch_team_roster(api, st.session_state['selected_team_id'])
@@ -63,39 +65,79 @@ def fetch_current_free_agents(position: str):
     return utils.fetch_free_agents(api, position)
 
 def search_player_news(query: str):
-    search_tool = TavilySearchResults()
-    return search_tool.invoke({"query": query + " Latest News"})
+    search_tool = TavilySearchResults(
+        max_results=5,
+        search_params={
+            "time_range": "1d",
+            "sort_by": "date"
+        }
+    )
+    return search_tool.invoke({"query": query + " Performance in last game"})
 
 def search_game_scores(query: str):
-    search_tool = TavilySearchResults()
+    search_tool = TavilySearchResults(
+        max_results=5,
+        search_params={
+            "time_range": "1d",
+            "sort_by": "date"
+        }
+    )
     return search_tool.invoke({"query": query})
 
 tools = [
-    StructuredTool.from_function(search_player_news, name="Search Player Info", description="Search for recent player information and performance"),
-    StructuredTool.from_function(fetch_league_standings, name="Fetch League Standings", description="Fetch the league standings"),
+    StructuredTool.from_function(search_player_news, name="Search Player News", description="Search for recent player information and performance, pass a string whose value is the player name"),
+    StructuredTool.from_function(fetch_league_standings, name="Fetch League Standings", description="Fetch the league standings, returns a dataframe with columns 'team', 'rank', and other stats. The 'is_my_team' column is a boolean indicating if the team is the user's team"),
     StructuredTool.from_function(fetch_user_team_roster, name="Fetch User's Team Roster", description="Get the roster of the user's team"),
     StructuredTool.from_function(fetch_user_team_name, name="Fetch User's Team Name", description="Get the name of the user's team"),
     StructuredTool.from_function(fetch_current_free_agents, name="Fetch Free Agents", description="Get a list of top available free agents for a given position, pass a string whose value is one of 'F', 'D' or 'G'"),
-    StructuredTool.from_function(fetch_opposing_team_roster, name="Fetch Opposing Team Roster", description="Get the roster of an opposing team for potential trades"),
-    StructuredTool.from_function(search_game_scores, name="Search Game Scores", description="Search for recent game scores of a given team")
+    StructuredTool.from_function(fetch_opposing_team_roster, name="Fetch Opposing Team Roster", description="Get the roster of an opposing team for potential trades, pass a string whose value is an opposing team name"),
+    StructuredTool.from_function(search_game_scores, name="Search Game Scores", description="Search for recent game scores of a given team, pass a string whose value is the team name")
 ]
 
 # Properly format tools and tool_names for inclusion in the prompt
 chat_prompt_template = hub.pull("danglesnipecelly/fantasy-hockey-coach:e8792e65")
-
-
 chat_prompt = chat_prompt_template
 
 def get_llm():
-    if st.secrets.get("ollama_server") and st.secrets.get("ollama_model"):
-        client = ollama.Client(host=st.secrets.get("ollama_server"))
-        llm = OllamaLLM(client=client, model=st.secrets.get("ollama_model"))
+    # Add model selection dropdown
+    if st.session_state['league_id'] not in st.secrets.get("league_whitelist", []):
+        model_choice = st.sidebar.selectbox(
+            "Select LLM Provider:",
+            ["OpenAI", "Groq", "Ollama"],
+            help="Choose your preferred language model provider"
+        )
+        
+        if model_choice == "Groq":
+            groq_key = st.sidebar.text_input("Enter your Groq API key:", type="password")
+            if groq_key:
+                return ChatGroq(api_key=groq_key, model="llama3-8b-8192")
+            
+        elif model_choice == "Ollama":
+            ollama_server = st.sidebar.text_input("Enter Ollama server URL:", value="http://localhost:11434")
+            ollama_model = st.sidebar.text_input("Enter Ollama model name:", value="mistral")
+            if ollama_server and ollama_model:
+                client = ollama.Client(host=ollama_server)
+                return OllamaLLM(client=client, model=ollama_model)
+                
+        else:  # OpenAI
+            openai_key = st.sidebar.text_input("Enter your OpenAI API key:", type="password")
+            model_name = st.sidebar.selectbox(
+                "Select OpenAI Model:",
+                ["gpt-3.5-turbo", "gpt-4", "gpt-4-turbo"],
+                help="Choose your preferred OpenAI model"
+            )
+            if openai_key:
+                return ChatOpenAI(openai_api_key=openai_key, model_name=model_name)
     else:
-        llm_api_key = st.text_input("Enter your OpenAI API key:", type="password")
-        llm = ChatOpenAI(openai_api_key=llm_api_key, model_name="gpt-4o-mini")
-    return llm
+        return ChatGroq(api_key=st.secrets.get("groq_api_key"), model="llama3-8b-8192")
+    
+    st.warning("Please provide the required API credentials to continue.")
+    st.stop()
 
-llm = get_llm()
+# Initialize LLM
+if 'llm' not in st.session_state:
+    st.session_state.llm = get_llm()
+llm = st.session_state.llm
 
 agent = create_structured_chat_agent(llm=llm, tools=tools, prompt=chat_prompt)
 
@@ -106,6 +148,11 @@ with st.sidebar:
     if st.button("Clear Chat Window", use_container_width=True, type="primary"):
         st.session_state.messages = []
         st.rerun()
+
+    if st.session_state['league_id'] not in st.secrets.get("league_whitelist", []):
+        if st.sidebar.button("Change LLM Settings"):
+            del st.session_state.llm
+            st.rerun()
 
 for message in st.session_state.messages:
     if message['role'] in ['user', 'ai']:
@@ -122,7 +169,7 @@ if prompt := st.chat_input("Are you ready? Good, cuz yer goin!"):
         message_placeholder.markdown("S'YeahSo...")
         response = ''
         try:
-            response = agent_executor({"input": prompt, "chat_history": st.session_state.messages})
+            response = agent_executor.invoke({"input": prompt, "chat_history": st.session_state.messages})
             if isinstance(response, dict) and 'output' in response:
                 response_text = response['output']
             else:

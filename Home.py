@@ -14,7 +14,7 @@ from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 
-from langchain_google_genai.chat_models import ChatGoogleGenerativeAI
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 from fantraxapi import FantraxAPI
 

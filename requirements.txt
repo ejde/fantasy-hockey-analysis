@@ -12,6 +12,7 @@ git+https://github.com/ejde/fantraxapi
 # For Recommendations
 langchain_google_genai
 langchain_openai
+langchain-groq
 langchain
 langchain-community
 tavily-python
